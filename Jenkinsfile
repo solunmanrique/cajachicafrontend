@@ -4,6 +4,8 @@ pipeline {
     environment {
         SONAR_SERVER = 'sonarqube-server'
         SONAR_ORGANIZATION = 'solunmanrique'
+        NODE_IMAGE = 'node:14.21.3-bullseye'
+        NPM_VERSION = '8.19.4'
     }
 
     stages {
@@ -24,11 +26,12 @@ pipeline {
         stage('Instalar dependencias') {
             agent {
                 docker {
-                    image 'node:14-bullseye'
+                    image "${env.NODE_IMAGE}"
                     args '-u root'
                 }
             }
             steps {
+                sh "npm install -g npm@${env.NPM_VERSION}"
                 sh 'npm ci'
             }
         }
@@ -36,7 +39,7 @@ pipeline {
         stage('Compilar Angular') {
             agent {
                 docker {
-                    image 'node:14-bullseye'
+                    image "${env.NODE_IMAGE}"
                     args '-u root'
                 }
             }
@@ -48,12 +51,13 @@ pipeline {
         stage('Analisis SonarQube') {
             agent {
                 docker {
-                    image 'node:14-bullseye'
+                    image "${env.NODE_IMAGE}"
                     args '-u root'
                 }
             }
             steps {
                 withSonarQubeEnv("${env.SONAR_SERVER}") {
+                    sh "npm install -g npm@${env.NPM_VERSION}"
                     sh """
                         npx sonar-scanner \
                         -Dsonar.organization=${env.SONAR_ORGANIZATION} \
