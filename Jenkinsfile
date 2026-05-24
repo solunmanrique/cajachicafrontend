@@ -39,45 +39,49 @@ pipeline {
             }
         }
 
-        stage('Compilar Angular') {
-            agent {
-                docker {
-                    image "${env.NODE_IMAGE}"
-                    args '-u root'
+        stage('Build y Sonar en paralelo') {
+            parallel {
+                stage('Compilar Angular') {
+                    agent {
+                        docker {
+                            image "${env.NODE_IMAGE}"
+                            args '-u root'
+                        }
+                    }
+                    steps {
+                        sh 'npm run build -- --configuration production'
+                    }
                 }
-            }
-            steps {
-                sh 'npm run build -- --configuration production'
-            }
-        }
 
-        stage('Analisis SonarQube') {
-            agent {
-                docker {
-                    image "${env.SONAR_NODE_IMAGE}"
-                    args '-u root'
-                }
-            }
-            steps {
-                withSonarQubeEnv("${env.SONAR_SERVER}") {
-                    sh '''
-                        apt-get update
-                        apt-get install -y --no-install-recommends openjdk-17-jre-headless curl unzip
-                        curl -sSLo /tmp/sonar-scanner.zip "https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-${SONAR_SCANNER_VERSION}-linux.zip"
-                        unzip -q /tmp/sonar-scanner.zip -d /opt
-                        export PATH="/opt/sonar-scanner-${SONAR_SCANNER_VERSION}-linux/bin:${PATH}"
+                stage('Analisis SonarQube') {
+                    agent {
+                        docker {
+                            image "${env.SONAR_NODE_IMAGE}"
+                            args '-u root'
+                        }
+                    }
+                    steps {
+                        withSonarQubeEnv("${env.SONAR_SERVER}") {
+                            sh '''
+                                apt-get update
+                                apt-get install -y --no-install-recommends openjdk-17-jre-headless curl unzip
+                                curl -sSLo /tmp/sonar-scanner.zip "https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-${SONAR_SCANNER_VERSION}-linux.zip"
+                                unzip -q /tmp/sonar-scanner.zip -d /opt
+                                export PATH="/opt/sonar-scanner-${SONAR_SCANNER_VERSION}-linux/bin:${PATH}"
 
-                        sonar-scanner \
-                        -Dsonar.host.url="${SONAR_HOST_URL}" \
-                        -Dsonar.token="${SONAR_AUTH_TOKEN}" \
-                        -Dsonar.organization="${SONAR_ORGANIZATION}" \
-                        -Dsonar.projectKey="${REPO_NAME}" \
-                        -Dsonar.projectName="${REPO_NAME}" \
-                        -Dsonar.sources=src \
-                        -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/*.spec.ts \
-                        -Dsonar.coverage.exclusions=**/* \
-                        -Dsonar.nodejs.executable="$(command -v node)"
-                    '''
+                                sonar-scanner \
+                                -Dsonar.host.url="${SONAR_HOST_URL}" \
+                                -Dsonar.token="${SONAR_AUTH_TOKEN}" \
+                                -Dsonar.organization="${SONAR_ORGANIZATION}" \
+                                -Dsonar.projectKey="${REPO_NAME}" \
+                                -Dsonar.projectName="${REPO_NAME}" \
+                                -Dsonar.sources=src \
+                                -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/*.spec.ts \
+                                -Dsonar.coverage.exclusions=**/* \
+                                -Dsonar.nodejs.executable="$(command -v node)"
+                            '''
+                        }
+                    }
                 }
             }
         }
