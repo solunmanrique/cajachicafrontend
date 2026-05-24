@@ -6,7 +6,8 @@ pipeline {
         SONAR_ORGANIZATION = 'solunmanrique'
         NODE_IMAGE = 'node:14.21.3-bullseye'
         NPM_VERSION = '8.19.4'
-        SONAR_SCANNER_IMAGE = 'sonarsource/sonar-scanner-cli:5.0.1'
+        SONAR_NODE_IMAGE = 'node:22-bookworm'
+        SONAR_SCANNER_VERSION = '5.0.1.3006'
     }
 
     stages {
@@ -52,23 +53,30 @@ pipeline {
         stage('Analisis SonarQube') {
             agent {
                 docker {
-                    image "${env.SONAR_SCANNER_IMAGE}"
-                    args '--entrypoint="" -u root'
+                    image "${env.SONAR_NODE_IMAGE}"
+                    args '-u root'
                 }
             }
             steps {
                 withSonarQubeEnv("${env.SONAR_SERVER}") {
-                    sh """
+                    sh '''
+                        apt-get update
+                        apt-get install -y --no-install-recommends openjdk-17-jre-headless curl unzip
+                        curl -sSLo /tmp/sonar-scanner.zip "https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-${SONAR_SCANNER_VERSION}-linux.zip"
+                        unzip -q /tmp/sonar-scanner.zip -d /opt
+                        export PATH="/opt/sonar-scanner-${SONAR_SCANNER_VERSION}-linux/bin:${PATH}"
+
                         sonar-scanner \
-                        -Dsonar.host.url=${env.SONAR_HOST_URL} \
-                        -Dsonar.login=${env.SONAR_AUTH_TOKEN} \
-                        -Dsonar.organization=${env.SONAR_ORGANIZATION} \
-                        -Dsonar.projectKey=${env.REPO_NAME} \
-                        -Dsonar.projectName=${env.REPO_NAME} \
+                        -Dsonar.host.url="${SONAR_HOST_URL}" \
+                        -Dsonar.token="${SONAR_AUTH_TOKEN}" \
+                        -Dsonar.organization="${SONAR_ORGANIZATION}" \
+                        -Dsonar.projectKey="${REPO_NAME}" \
+                        -Dsonar.projectName="${REPO_NAME}" \
                         -Dsonar.sources=src \
                         -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/*.spec.ts \
+                        -Dsonar.nodejs.executable="$(command -v node)" \
                         -Dsonar.qualitygate.wait=true
-                    """
+                    '''
                 }
             }
         }
