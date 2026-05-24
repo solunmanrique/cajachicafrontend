@@ -6,6 +6,7 @@ pipeline {
         SONAR_ORGANIZATION = 'solunmanrique'
         NODE_IMAGE = 'node:14.21.3-bullseye'
         NPM_VERSION = '8.19.4'
+        SONAR_SCANNER_IMAGE = 'sonarsource/sonar-scanner-cli:5.0.1'
     }
 
     stages {
@@ -51,15 +52,16 @@ pipeline {
         stage('Analisis SonarQube') {
             agent {
                 docker {
-                    image "${env.NODE_IMAGE}"
-                    args '-u root'
+                    image "${env.SONAR_SCANNER_IMAGE}"
+                    args '--entrypoint="" -u root'
                 }
             }
             steps {
                 withSonarQubeEnv("${env.SONAR_SERVER}") {
-                    sh "npm install -g npm@${env.NPM_VERSION}"
                     sh """
-                        npx sonar-scanner \
+                        sonar-scanner \
+                        -Dsonar.host.url=${env.SONAR_HOST_URL} \
+                        -Dsonar.login=${env.SONAR_AUTH_TOKEN} \
                         -Dsonar.organization=${env.SONAR_ORGANIZATION} \
                         -Dsonar.projectKey=${env.REPO_NAME} \
                         -Dsonar.projectName=${env.REPO_NAME} \
@@ -84,3 +86,4 @@ pipeline {
         }
     }
 }
+
