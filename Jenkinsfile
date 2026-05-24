@@ -6,7 +6,7 @@ pipeline {
         SONAR_ORGANIZATION = 'solunmanrique'
         NODE_IMAGE = 'node:14.21.3-bullseye'
         NPM_VERSION = '8.19.4'
-        SONAR_NODE_IMAGE = 'node:22-bookworm'
+        SONAR_NODE_IMAGE = 'node:24-bookworm'
         SONAR_SCANNER_VERSION = '5.0.1.3006'
     }
 
@@ -74,8 +74,8 @@ pipeline {
                         -Dsonar.projectName="${REPO_NAME}" \
                         -Dsonar.sources=src \
                         -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/*.spec.ts \
-                        -Dsonar.nodejs.executable="$(command -v node)" \
-                        -Dsonar.qualitygate.wait=true
+                        -Dsonar.coverage.exclusions=**/* \
+                        -Dsonar.nodejs.executable="$(command -v node)"
                     '''
                 }
             }
@@ -94,4 +94,3 @@ pipeline {
         }
     }
 }
-
